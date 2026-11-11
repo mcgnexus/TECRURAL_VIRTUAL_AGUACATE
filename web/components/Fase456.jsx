@@ -17,7 +17,6 @@ export default function Fase456({ meteo }) {
 
   useEffect(() => {
     listarObservaciones("fase", 20).then((j) => setFases(j.observaciones)).catch(() => {});
-    leerDiagnostico().then(setDiag).catch((e) => setDiagMsg(String(e.message || e)));
   }, []);
 
   async function vigilar() {
@@ -65,7 +64,8 @@ export default function Fase456({ meteo }) {
       <div><button style={btn} onClick={vigilar}>Registrar vigilancia</button> <span style={hint}>{msg}</span></div>
       {fases.length > 0 && <p style={hint}>Fases observadas: {fases.map((o) => `${o.fecha}: ${o.texto || o.valor_num}`).join(" · ")}</p>}
       {diag ? <p><a href={diag.url}>Abrir diagnóstico visual</a> <span style={hint}>{diag.nota}</span></p>
-        : <p style={hint}>Diagnóstico visual: {diagMsg || "cargando…"}</p>}
+        : <div><button style={btn2} onClick={() => leerDiagnostico().then(setDiag).catch((e) => setDiagMsg(String(e.message || e)))}>Comprobar diagnóstico visual</button>
+          {diagMsg && <p style={hint}>{diagMsg}</p>}</div>}
 
       <h3>Sectores de riego</h3>
       <p style={hint}>Grupos de árboles con distinto suelo, pendiente o riego. La predicción cuantitativa de producción por sector requiere datos y validación; aquí solo se compara agua y estrés.</p>
