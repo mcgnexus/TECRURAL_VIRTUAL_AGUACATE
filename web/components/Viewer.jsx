@@ -65,7 +65,7 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
     try {
       THREE = await import("three");
       ({ OrbitControls } = await import("three/addons/controls/OrbitControls.js"));
-    } catch { api3d.current.cargando = false; avisar("2d"); setNota("No se pudo cargar Three.js. Vista 2D activada."); return; }
+    } catch (err) { api3d.current.cargando = false; avisar("2d"); setNota("No se pudo cargar Three.js: " + (err && err.message ? err.message : err)); return; }
     try {
       const el = visorRef.current;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -170,7 +170,7 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
       set3d(estadoEfectivo());
       setNota(glbOk ? "Modelo: arbol_hass.glb" : "Modelo provisional procedural (no fotorrealista)");
       avisar("3d");
-    } catch { api3d.current.cargando = false; avisar("2d"); setNota("WebGL no disponible. Vista 2D activada."); }
+    } catch (err) { api3d.current.cargando = false; avisar("2d"); setNota("Vista 3D no disponible: " + (err && err.message ? err.message : err)); }
   }
 
   useEffect(() => {
