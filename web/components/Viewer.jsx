@@ -49,13 +49,23 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
   }
 
   const avisar = (m) => { setModo(m); onModo && onModo(m); };
-  async function cargar3d() {
-    if (api3d.current.listo) { avisar("3d"); return; }
+  // El contenedor 3D solo existe cuando modo==="3d": primero se muestra,
+  // y la escena se construye en el efecto de abajo, con el DOM ya montado.
+  function cargar3d() {
+    if (api3d.current.listo || api3d.current.cargando) { avisar("3d"); return; }
+    api3d.current.cargando = true;
+    avisar("3d");
+  }
+  useEffect(() => {
+    if (modo === "3d" && !api3d.current.listo) init3d();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo]);
+  async function init3d() {
     let THREE, OrbitControls;
     try {
       THREE = await import("three");
       ({ OrbitControls } = await import("three/addons/controls/OrbitControls.js"));
-    } catch { avisar("2d"); setNota("No se pudo cargar Three.js. Vista 2D activada."); return; }
+    } catch { api3d.current.cargando = false; avisar("2d"); setNota("No se pudo cargar Three.js. Vista 2D activada."); return; }
     try {
       const el = visorRef.current;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -160,7 +170,7 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
       set3d(estadoEfectivo());
       setNota(glbOk ? "Modelo: arbol_hass.glb" : "Modelo provisional procedural (no fotorrealista)");
       avisar("3d");
-    } catch { avisar("2d"); setNota("WebGL no disponible. Vista 2D activada."); }
+    } catch { api3d.current.cargando = false; avisar("2d"); setNota("WebGL no disponible. Vista 2D activada."); }
   }
 
   useEffect(() => {
