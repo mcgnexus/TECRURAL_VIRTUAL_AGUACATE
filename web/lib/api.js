@@ -1,5 +1,4 @@
-const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-export const API_URL = API;
+const API = "/api/backend";
 
 export async function simular(payload) {
   const r = await fetch(`${API}/simular`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });

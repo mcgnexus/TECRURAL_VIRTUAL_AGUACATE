@@ -52,6 +52,9 @@ _driver = None  # 'neon' | 'sqlite'
 def _connect():
     global _driver
     url = os.environ.get("DATABASE_URL")
+    if not url and os.environ.get("VERCEL"):
+        # En Vercel el disco es efimero: sin DATABASE_URL no hay donde guardar.
+        raise RuntimeError("DATABASE_URL no configurada")
     if url:
         try:
             import psycopg  # type: ignore
