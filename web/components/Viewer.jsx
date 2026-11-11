@@ -149,7 +149,8 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
       }
       const set3d = (e) => {
         if (!leaves) return;
-        const c = { normal: [0x35902f, 0x2f7a2d], "pre-estres": [0x6f8f2f, 0x5d7a28], estres: [0x9a8a2e, 0x8a7426] }[e];
+        const paleta = { normal: [0x35902f, 0x2f7a2d], "pre-estres": [0x6f8f2f, 0x5d7a28], estres: [0x9a8a2e, 0x8a7426] };
+        const c = paleta[e] || paleta.normal;
         leaves.material.color.setHex(c[0]); leafMat.color.setHex(c[1]);
         leaves.rotation.z = e === "normal" ? 0 : e === "pre-estres" ? 0.03 : 0.07;
       };
