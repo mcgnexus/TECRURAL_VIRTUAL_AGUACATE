@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TecRural · Mi aguacate virtual</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="stylesheet" href="styles.css"/>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header><h1>🥑 TecRural · Mi aguacate virtual <small>(MVP)</small></h1>
+<p class="badge">Simulación orientativa — NO es gemelo digital validado</p></header>
+<main>
+<section class="panel">
+<h2>Mi árbol — Almuñécar Hass adulto</h2>
+<label>Reserva inicial suelo (mm) <input id="reserva" type="number" value="35" min="0" max="90"/>
+<select id="origen_reserva">
+<option value="estimado">🟡 Estimada</option><option value="medido">🟢 Medida</option><option value="introducido">🔵 Introducida</option>
+</select></label>
+<div id="boxSensor" style="display:none">
+<label>Sensor (id) <input id="sensor_id" type="text" placeholder="ej. sonda-01"/></label>
+<label>Fecha lectura <input id="sensor_fecha" type="date"/></label>
+</div>
+<label>Edad (años) <input id="edad" type="number" value="8" min="1" max="30"/></label>
+<label><input id="usarGoteros" type="checkbox" checked/> Riego por goteros (si no, mm/día)</label>
+<div id="boxGoteros">
+<label>Nº goteros/árbol <input id="ngot" type="number" value="4" min="1"/></label>
+<label>Caudal (L/h por gotero) <input id="caudal" type="number" step="0.5" value="4"/></label>
+<label>Horas riego/día (A) <input id="horasA" type="number" step="0.25" value="2"/></label>
+</div>
+<label id="boxMm" style="display:none">Riego habitual A (mm/día) <input id="riegoA" type="number" step="0.1" value="3.5"/></label>
+<label>Marco X (m) <input id="marcoX" type="number" step="0.5" value="5"/></label>
+<label>Marco Y (m) <input id="marcoY" type="number" step="0.5" value="5"/></label>
+<label>Fracción mojada goteo (0.3–0.55) <input id="fmoj" type="number" step="0.05" value="0.45"/></label>
+<label>Eficiencia aplicación (0.8–0.95) <input id="efi" type="number" step="0.05" value="0.9"/></label>
+<label>Escenario B: reducción % <input id="redB" type="number" value="25" min="0" max="60"/></label>
+<label>ETo (mm/día) <input id="eto" type="number" step="0.1" value="4.5"/>
+<select id="origen_eto">
+<option value="estimado">🟡 Estimada</option><option value="externo">🌐 Externa</option><option value="medido">🟢 Medida</option><option value="introducido">🔵 Introducida</option>
+</select></label>
+<label>Lluvia (mm/día) <input id="lluvia" type="number" step="0.5" value="0"/>
+<select id="origen_lluvia">
+<option value="estimado">🟡 Estimada</option><option value="externo">🌐 Externa</option><option value="medido">🟢 Medida</option><option value="introducido">🔵 Introducida</option>
+</select></label>
+<div id="boxMeteo" style="display:none">
+<label>Proveedor <input id="met_prov" type="text" placeholder="ej. AEMET"/></label>
+<label>Ubicación <input id="met_ubi" type="text" placeholder="ej. Almuñécar 36.73,-3.69"/></label>
+<label>Actualización <input id="met_fecha" type="date"/></label>
+</div>
+<button id="simular">Comparar 14 días</button>
+<p id="motor" class="hint"></p>
+<p class="hint">Suelo franco · goteo. La fracción mojada se registra pero no simula el bulbo húmedo 3D.</p>
+</section>
+<section class="panel" id="visorSec"><h2>Árbol 3D — escenario B</h2>
+<p class="hint">Demostración visual; aún no representa un modelo validado. El visor recibe el estado del modelo, no calcula nada.</p>
+<div id="visorPH"><button id="cargar3d">Cargar vista 3D</button> <button id="ver2d">Usar vista 2D</button>
+<p class="hint" id="origen3d"></p></div>
+<div id="visor" style="display:none"></div>
+<canvas id="visor2d" width="640" height="340" style="display:none;width:100%"></canvas>
+<p class="hint" id="motor2d"></p>
+<p id="estadoArbol" class="badge">Estado: —</p></section>
+<section class="panel"><h2>Reserva hídrica <span id="nivelRes" class="badge">—</span></h2>
+<canvas id="graf" width="640" height="220"></canvas>
+<div id="res"></div><ul id="motivos"></ul></section>
+<section class="panel"><h2>Hipótesis de cosecha (tuya, no del modelo)</h2>
+<label>Kg/árbol mín <input id="kgmin" type="number" value="25"/></label>
+<label>Kg/árbol máx <input id="kgmax" type="number" value="40"/></label>
+<label>Precio mín €/kg <input id="pmin" type="number" step="0.1" value="1.2"/></label>
+<label>Precio máx €/kg <input id="pmax" type="number" step="0.1" value="1.8"/></label>
+<div id="cosecha"></div></section>
+<section class="panel"><h2>Datos utilizados</h2><ul id="fuentes"></ul>
+<p class="hint">🟢 Medido: sensor identificado · 🔵 Introducido: aportado por ti · 🟡 Estimado: supuesto del modelo · 🌐 Externo: proveedor con fecha y ubicación.</p></section>
+</main>
+<script type="module" src="app.js"></script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+</body></html>

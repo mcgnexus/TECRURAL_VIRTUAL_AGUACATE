@@ -1,0 +1,17 @@
+# dependencias
+node_modules/
+web/.next/
+web/out/
+# datos locales (no versionar)
+backend/simulaciones.db
+*.db
+# python
+__pycache__/
+*.pyc
+.venv/
+# sistema
+.DS_Store
+Thumbs.db
+# secretos
+.env
+web/.env.local
