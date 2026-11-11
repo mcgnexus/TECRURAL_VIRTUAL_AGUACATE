@@ -56,7 +56,21 @@ def _connect():
         try:
             import psycopg  # type: ignore
             _driver = "neon"
-            return psycopg.connect(url)
+            con = psycopg.connect(url)
+            con.execute("create table if not exists registro_simulacion "
+                        "(id text primary key, version_modelo text not null, "
+                        "entradas text not null, resultados text not null, created_at text not null)")
+            con.execute("create table if not exists registro_observacion "
+                        "(id text primary key, fecha text not null, tipo text not null, "
+                        "valor_num real, texto text, nota text, creado text not null)")
+            con.execute("create table if not exists vinculo_recuperacion "
+                        "(token text primary key, email text not null, registro_id text not null, "
+                        "creado text not null, expira text not null, usado integer not null default 0)")
+            con.execute("create table if not exists eventos "
+                        "(id integer generated always as identity primary key, "
+                        "evento text not null, sesion text not null, creado text not null)")
+            con.commit()
+            return con
         except Exception:
             pass
     _driver = "sqlite"
@@ -176,21 +190,20 @@ def guardar_observacion(fecha: str, tipo: str, valor_num: float | None,
                         texto: str | None, nota: str | None) -> dict:
     if tipo not in TIPOS_OBSERVACION:
         raise ValueError("tipo no permitido")
+    oid = uuid.uuid4().hex[:12]
     con = _connect()
     try:
         ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
         if _driver == "neon":
             with con.cursor() as cur:
-                cur.execute("insert into registro_observacion (fecha, tipo, valor_num, texto, nota, creado) "
-                            "values (%s,%s,%s,%s,%s,%s) returning id",
-                            (fecha, tipo, valor_num, texto, nota, ahora))
-                oid = cur.fetchone()[0]
+                cur.execute("insert into registro_observacion (id, fecha, tipo, valor_num, texto, nota, creado) "
+                            "values (%s,%s,%s,%s,%s,%s,%s)",
+                            (oid, fecha, tipo, valor_num, texto, nota, ahora))
             con.commit()
         else:
-            cur = con.execute("insert into registro_observacion (fecha, tipo, valor_num, texto, nota, creado) "
-                              "values (?,?,?,?,?,?)", (fecha, tipo, valor_num, texto, nota, ahora))
+            con.execute("insert into registro_observacion (id, fecha, tipo, valor_num, texto, nota, creado) "
+                        "values (?,?,?,?,?,?,?)", (oid, fecha, tipo, valor_num, texto, nota, ahora))
             con.commit()
-            oid = cur.lastrowid
     finally:
         con.close()
     return {"id": oid}

@@ -51,7 +51,7 @@ create table if not exists registro_simulacion (
   created_at text not null
 );
 create table if not exists registro_observacion (
-  id integer primary key autoincrement,
+  id text primary key,
   fecha text not null,
   tipo text not null, -- riego_real_mm | lluvia_real_mm | humedad_suelo_mm | fase | sintoma
   valor_num real,
@@ -59,7 +59,20 @@ create table if not exists registro_observacion (
   nota text,
   creado text not null
 );
+create table if not exists vinculo_recuperacion (
+  token text primary key,
+  email text not null,
+  registro_id text not null,
+  creado text not null,
+  expira text not null,
+  usado integer not null default 0
+);
+create table if not exists eventos (
+  id integer generated always as identity primary key,
+  evento text not null,
+  sesion text not null,
+  creado text not null
+);
 -- Parcela demo Almunecar
 insert into parcela (nombre, lat, lon, municipio_id, variedad, edad_anios, suelo_tipo, riego_tipo)
-values ('Demo Almunecar Hass adulto', 36.733, -3.69, '18001', 'Hass', 8, 'franco', 'goteo')
-on conflict do nothing;
+values ('Demo Almunecar Hass adulto', 36.733, -3.69, '18001', 'Hass', 8, 'franco', 'goteo');
