@@ -65,6 +65,18 @@ export async function leerMicroestacion() {
   if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ("Microestación " + r.status)); }
   return r.json();
 }
+
+export async function leerDiagnostico() {
+  const r = await fetch(`${API}/diagnostico`);
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ("Diagnóstico " + r.status)); }
+  return r.json();
+}
+
+export async function simularParcela(payload) {
+  const r = await fetch(`${API}/parcela/simular`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ("Parcela " + r.status)); }
+  return r.json();
+}
 export async function guardarArbol(email, escenario, consent_comercial) {
   const r = await fetch(`${API}/guardar`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, escenario, consent_comercial }) });
   if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || ("Guardar " + r.status)); }

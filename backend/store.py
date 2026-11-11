@@ -167,7 +167,8 @@ def obtener_vinculo(token: str) -> dict | None:
 
 TIPOS_OBSERVACION = {
     "riego_real_mm", "lluvia_real_mm", "humedad_suelo_mm",
-    "fase", "sintoma",
+    "fase", "sintoma", "acaro", "fauna_auxiliar",
+    "floracion", "frutos", "analisis", "abonado",
 }
 
 

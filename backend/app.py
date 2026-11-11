@@ -6,6 +6,7 @@ from modelos.balance_hidrico import (
     mm_a_litros_arbol, goteros_a_mm_dia, capacidad_util_mm,
 )
 from modelos.rendimiento import HipotesisCosecha, NOTA_MODELO
+from modelos.fenologia import FASES, grados_dia_acumulados, alertas_climaticas
 from modelos.version import MODEL_VERSION, PARAMETROS_EFECTIVOS
 from modelos.meteo_adapter import meteo_combinada
 import store
@@ -32,6 +33,9 @@ class EscenarioIn(BaseModel):
     horas_riego_dia: float = 2.0
     eto_diaria: list[float] | None = None
     lluvia_diaria: list[float] | None = None
+    tmax_diaria: list[float] | None = None
+    tmin_diaria: list[float] | None = None
+    viento_diaria: list[float] | None = None
     reserva_inicial_mm: float = 60.0
     edad_anios: float = 8.0
     suelo_util_mm: float | None = None  # si None, se calcula de textura+raices
@@ -57,10 +61,56 @@ class EscenarioIn(BaseModel):
     hipotesis_kg_max: float | None = None
     hipotesis_precio_min: float | None = None
     hipotesis_precio_max: float | None = None
+    hipotesis_coste_min: float | None = None
+    hipotesis_coste_max: float | None = None
 
 @app.get("/salud")
 def salud():
     return {"ok": True, "servicio": "aguacate-virtual-mvp"}
+
+class SectorIn(BaseModel):
+    nombre: str = "Sector 1"
+    n_arboles: int = 1
+    escenario: EscenarioIn
+
+class ParcelaIn(BaseModel):
+    nombre: str = "Mi parcela"
+    eto_diaria: list[float] | None = None
+    lluvia_diaria: list[float] | None = None
+    tmax_diaria: list[float] | None = None
+    tmin_diaria: list[float] | None = None
+    sectores: list[SectorIn] = Field(min_length=1)
+
+@app.post("/parcela/simular")
+def simular_parcela(p: ParcelaIn):
+    """Del arbol a la parcela: cada sector tiene su suelo, riego y arboles.
+    La meteo comun se aplica a todos salvo que el sector traiga la suya.
+    El JSON devuelto es el formato de intercambio con el simulador general
+    (formato: tec-rural-parcela/1)."""
+    res = []
+    for s in p.sectores:
+        ent = s.escenario.model_copy(update={
+            "eto_diaria": s.escenario.eto_diaria or p.eto_diaria,
+            "lluvia_diaria": s.escenario.lluvia_diaria or p.lluvia_diaria,
+            "tmax_diaria": s.escenario.tmax_diaria or p.tmax_diaria,
+            "tmin_diaria": s.escenario.tmin_diaria or p.tmin_diaria,
+        })
+        r = simular(ent)
+        n = len(r["riego_mm_dia"])
+        agua_total_l = round(r["equivalencia"]["riego_medio_litros_arbol_dia"] * n * s.n_arboles, 0)
+        res.append({"sector": s.nombre, "n_arboles": s.n_arboles,
+                    "reserva_final_mm": r["reserva_final_mm"],
+                    "dias_estres": r["dias_estres"], "dias_preestres": r["dias_preestres"],
+                    "drenaje_total_mm": r["drenaje_total_mm"],
+                    "agua_aplicada_total_l": agua_total_l,
+                    "suelo": r["suelo"], "estado": r["estado"]["nivel"]})
+    return {"formato": "tec-rural-parcela/1",
+            "parcela": p.nombre,
+            "modelo": {"version": MODEL_VERSION, "parametros": PARAMETROS_EFECTIVOS},
+            "sectores": res,
+            "agua_total_l": round(sum(s["agua_aplicada_total_l"] for s in res), 0),
+            "nota": "Sectores independientes con la misma meteo salvo indicacion. "
+                    "Enviar este JSON al simulador general para continuar el analisis."}
 
 @app.get("/meteo")
 async def meteo(lat: float = 36.733, lon: float = -3.69, municipio_id: str | None = "18001",
@@ -93,6 +143,14 @@ def simular(e: EscenarioIn):
     kc_val = None if e.kc_opcion == "adulto" else (SueloParams().kc_hass_joven if e.kc_opcion == "joven" else e.kc_manual)
     riego_p = RiegoParams(fraccion_mojada=e.fraccion_mojada, eficiencia_aplicacion=e.eficiencia_aplicacion)
     bal = simular_balance(eto, lluvia, riego_mm, e.reserva_inicial_mm, suelo, kc=kc_val, riego=riego_p)
+    dias_sat = sum(1 for r in bal["reservas_mm"] if r >= cap * 0.9)
+    riesgo_humedad = (None if dias_sat == 0 else
+        "Suelo casi saturado %d dia(s): condiciones favorables a problemas de raiz. "
+        "No afirma presencia de Phytophthora ni diagnostica asfixia; revisar drenaje." % dias_sat)
+    clima = None
+    if e.tmax_diaria or e.tmin_diaria:
+        clima = {"gdd_base10": grados_dia_acumulados(e.tmax_diaria or [0] * n, e.tmin_diaria or [0] * n),
+                 "alertas": alertas_climaticas(e.tmax_diaria, e.tmin_diaria, lluvia, e.viento_diaria)}
     sup_m2 = round(e.marco_x_m * e.marco_y_m, 1)
     equiv = {
         "marco_m": [e.marco_x_m, e.marco_y_m],
@@ -163,10 +221,20 @@ def simular(e: EscenarioIn):
     if e.hipotesis_kg_min is not None and e.hipotesis_kg_max is not None:
         h = HipotesisCosecha(e.hipotesis_kg_min, e.hipotesis_kg_max,
                              e.hipotesis_precio_min, e.hipotesis_precio_max)
+        margen = None
+        if h.ingresos_brutos() and e.hipotesis_coste_min is not None and e.hipotesis_coste_max is not None:
+            ing = h.ingresos_brutos()
+            margen = [round(ing[0] - e.hipotesis_coste_max, 2),
+                      round(ing[1] - e.hipotesis_coste_min, 2)]
         hipotesis = {"kg": [h.kg_min, h.kg_max],
                      "ingresos_brutos_eur": h.ingresos_brutos(),
+                     "costes_eur": ([e.hipotesis_coste_min, e.hipotesis_coste_max]
+                                    if e.hipotesis_coste_min is not None else None),
+                     "margen_bruto_eur": margen,
                      "nota": "Hipotesis del agricultor, no prediccion del modelo."}
     return {**bal, "riego_mm_dia": riego_mm, "equivalencia": equiv,
+            "dias_saturacion": dias_sat, "riesgo_humedad": riesgo_humedad,
+            "clima": clima, "fases_disponibles": [f["id"] for f in FASES],
             "suelo": {"textura": e.textura, "prof_raices_m": e.prof_raices_m,
                       "capacidad_util_mm": cap, "kc_usado": kc_val or SueloParams().kc_hass_adulto},
             "cosecha": {"nota": NOTA_MODELO},
@@ -299,6 +367,25 @@ def contraste(c: ContrasteIn):
         out["diferencia_realizado_medido_mm"] = dif
         out["interpretacion_medido"] = inter
     return out
+
+@app.get("/fases")
+def fases():
+    """Fases fenologicas configurables para registrar lo observado."""
+    return {"fases": FASES,
+            "nota": "El agricultor indica la fase que observa; el modelo no la predice."}
+
+@app.get("/diagnostico")
+def diagnostico():
+    """Conexion con la herramienta de diagnostico visual (opcional).
+    Sus resultados son posibles causas que requieren comprobacion en campo,
+    nunca una confirmacion automatica."""
+    import os
+    url = os.environ.get("DIAG_URL")
+    if not url:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=501, detail="diagnostico visual no configurado (DIAG_URL)")
+    return {"url": url,
+            "nota": "Posibles causas a comprobar en campo; no es una confirmacion automatica."}
 
 @app.get("/microestaciones")
 def microestaciones():

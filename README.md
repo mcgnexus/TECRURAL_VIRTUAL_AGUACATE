@@ -79,7 +79,8 @@ brutos) y la etiqueta como suya. Ejemplo: 2000–3000 kg × 1,20–1,80 €/kg
 
 ## Estructura
 - `web/`: Next.js + React (puerto 3000) — formulario, comparador, Viewer 3D directo, Guardar, `/recuperar/[token]`
-- `backend/app.py`: API `/salud`, `/meteo`, `/simular`, `/simulaciones`, `/guardar`, `/recuperar/{token}`, `/eventos`, `/observaciones`, `/contraste`, `/microestaciones`
+- `backend/app.py`: API `/salud`, `/meteo`, `/simular`, `/simulaciones`, `/guardar`, `/recuperar/{token}`, `/eventos`, `/observaciones`, `/contraste`, `/microestaciones`, `/fases`, `/diagnostico`, `/parcela/simular`
+- `backend/modelos/fenologia.py`: fases configurables, grados-día, alertas orientativas
 - `backend/modelos/balance_hidrico.py`: reserva diaria, agotamiento, drenaje, estados
 - `backend/modelos/rendimiento.py`: el modelo NO estima kilos (solo hipótesis del agricultor)
 - `backend/modelos/meteo_adapter.py`: AEMET + Open-Meteo con proveedor, ubicación y fecha

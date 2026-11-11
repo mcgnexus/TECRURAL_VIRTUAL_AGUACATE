@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Viewer from "../components/Viewer";
 import Guardar from "../components/Guardar";
 import Fase3 from "../components/Fase3";
+import Fase456 from "../components/Fase456";
 import { simular, balanceLocal, EMOJI, evento, cargarMeteo } from "../lib/api";
 
 const BORRADOR_DIAS = 7;
@@ -11,7 +12,7 @@ const serie = (n, v) => Array(n).fill(v);
 const COLORS = { pre: "#6f8f2f", est: "#9a8a2e" };
 
 export default function Page() {
-  const [f, setF] = useState({ reserva: 35, edad: 8, ngot: 4, caudal: 4, horasA: 2, marcoX: 5, marcoY: 5, fmoj: 0.45, efi: 0.9, redB: 25, eto: 4.5, lluvia: 0, textura: "franco", profR: 0.6, kcOp: "adulto", kcMan: 0.85, oRes: "estimado", oEto: "estimado", oLlu: "estimado", sensor: "", sensorFecha: "", metProv: "", metUbi: "", metFecha: "", kgmin: 25, kgmax: 40, pmin: 1.2, pmax: 1.8, goteros: true });
+  const [f, setF] = useState({ reserva: 35, edad: 8, ngot: 4, caudal: 4, horasA: 2, marcoX: 5, marcoY: 5, fmoj: 0.45, efi: 0.9, redB: 25, eto: 4.5, lluvia: 0, textura: "franco", profR: 0.6, kcOp: "adulto", kcMan: 0.85, oRes: "estimado", oEto: "estimado", oLlu: "estimado", sensor: "", sensorFecha: "", metProv: "", metUbi: "", metFecha: "", kgmin: 25, kgmax: 40, pmin: 1.2, pmax: 1.8, cmin: "", cmax: "", tmax: 28, tmin: 16, goteros: true });
   const [R, setR] = useState(null);
   const [motor, setMotor] = useState("");
   const [payloadB, setPayloadB] = useState(null);
@@ -64,7 +65,7 @@ export default function Page() {
     const origen = { reserva_inicial: f.oRes, eto: f.oEto, lluvia: f.oLlu, suelo: "introducido", marco: "introducido", riego: "introducido" };
     let A, B, via = "API (motor único)", payB = null;
     try {
-      const base = { eto_diaria: eto, lluvia_diaria: lluvia, reserva_inicial_mm: r0, edad_anios: +f.edad, textura: f.textura, prof_raices_m: +f.profR || 0.6, kc_opcion: f.kcOp, kc_manual: +f.kcMan || null, marco_x_m: mx, marco_y_m: my, fraccion_mojada: +f.fmoj, eficiencia_aplicacion: efic, origen, sensor_reserva_id: f.sensor || null, sensor_reserva_fecha: f.sensorFecha || null, meteo_proveedor: f.metProv || null, meteo_ubicacion: f.metUbi || null, meteo_fecha: f.metFecha || null };
+      const base = { eto_diaria: eto, lluvia_diaria: lluvia, tmax_diaria: serie(n, +f.tmax || 0), tmin_diaria: serie(n, +f.tmin || 0), reserva_inicial_mm: r0, edad_anios: +f.edad, textura: f.textura, prof_raices_m: +f.profR || 0.6, kc_opcion: f.kcOp, kc_manual: +f.kcMan || null, marco_x_m: mx, marco_y_m: my, fraccion_mojada: +f.fmoj, eficiencia_aplicacion: efic, origen, sensor_reserva_id: f.sensor || null, sensor_reserva_fecha: f.sensorFecha || null, meteo_proveedor: f.metProv || null, meteo_ubicacion: f.metUbi || null, meteo_fecha: f.metFecha || null, hipotesis_kg_min: +f.kgmin, hipotesis_kg_max: +f.kgmax, hipotesis_precio_min: +f.pmin, hipotesis_precio_max: +f.pmax, hipotesis_coste_min: f.cmin === "" ? null : +f.cmin, hipotesis_coste_max: f.cmax === "" ? null : +f.cmax };
       if (f.goteros) {
         A = await simular({ ...base, usar_goteros: true, num_goteros: ng, caudal_l_h: q, horas_riego_dia: hA });
         B = await simular({ ...base, usar_goteros: true, num_goteros: ng, caudal_l_h: q, horas_riego_dia: +(hA * (1 - red / 100)).toFixed(2) });
@@ -130,6 +131,8 @@ export default function Page() {
           <Campo label="Reducción B %" v={f.redB} set={set("redB")} />
           <Campo label="ETo mm/d" v={f.eto} set={set("eto")} />
           <Origen v={f.oEto} set={set("oEto")} />
+          <Campo label="Tmax °C" v={f.tmax} set={set("tmax")} />
+          <Campo label="Tmin °C" v={f.tmin} set={set("tmin")} />
           <Campo label="Lluvia mm/d" v={f.lluvia} set={set("lluvia")} />
           <Origen v={f.oLlu} set={set("oLlu")} />
         </div>
@@ -165,6 +168,8 @@ export default function Page() {
           {R.B.drenaje_total_mm > 0 ? ` Drenaje B: ${R.B.drenaje_total_mm} mm (no diagnostica asfixia).` : " Sin drenaje estimado."}
           {R.B.suelo && ` Suelo: ${R.B.suelo.textura}, raíces ${R.B.suelo.prof_raices_m} m → capacidad ${R.B.suelo.capacidad_util_mm} mm, Kc ${R.B.suelo.kc_usado}.`}</p>
           <ul>{(R.B.estado?.motivos || []).map((m, i) => <li key={i}>{m}</li>)}</ul>
+          {R.B.clima && <p>Grados-día (base 10): {R.B.clima.gdd_base10}. {R.B.clima.alertas.length ? R.B.clima.alertas.map((a) => `Día ${a.dia + 1}: ${a.mensaje}`).join(" ") : "Sin alertas climáticas."}</p>}
+          {R.B.riesgo_humedad && <p><b>Riesgo humedad:</b> {R.B.riesgo_humedad}</p>}
         </>)}
       </section>
       <section style={panel}>
@@ -183,6 +188,7 @@ export default function Page() {
         {micro && <p style={hint}>Anotado tu interés. Te contactaremos cuando haya novedades para tu zona.</p>}
       </section>
       <Fase3 escenario={payloadB} />
+      <Fase456 meteo={meteo} />
       <section style={panel}>
         <h2>Hipótesis de cosecha (tuya, no del modelo)</h2>
         <div style={grid}>
@@ -190,8 +196,11 @@ export default function Page() {
           <Campo label="Kg máx" v={f.kgmax} set={set("kgmax")} />
           <Campo label="Precio mín" v={f.pmin} set={set("pmin")} />
           <Campo label="Precio máx" v={f.pmax} set={set("pmax")} />
+          <Campo label="Coste mín €/árb" v={f.cmin} set={set("cmin")} />
+          <Campo label="Coste máx €/árb" v={f.cmax} set={set("cmax")} />
         </div>
-        <p><b>Tu hipótesis:</b> {f.kgmin}–{f.kgmax} kg/árbol · {Math.round(f.kgmin * f.pmin)}–{Math.round(f.kgmax * f.pmax)} €/árbol.</p>
+        <p><b>Tu hipótesis:</b> {f.kgmin}–{f.kgmax} kg/árbol · {Math.round(f.kgmin * f.pmin)}–{Math.round(f.kgmax * f.pmax)} €/árbol.
+        {f.cmin !== "" && f.cmax !== "" && ` Margen: ${Math.round(f.kgmin * f.pmin - f.cmax)}–${Math.round(f.kgmax * f.pmax - f.cmin)} €/árbol (con tus costes).`}</p>
         <p style={hint}>El modelo no estima la cosecha. El cuajado depende de floración y polinización, aún no simulados.</p>
       </section>
       <section style={panel}>
