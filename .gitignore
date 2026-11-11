@@ -15,3 +15,6 @@ Thumbs.db
 # secretos
 .env
 web/.env.local
+
+.vercel
+.env*
