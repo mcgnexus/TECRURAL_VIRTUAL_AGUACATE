@@ -5,7 +5,7 @@ const COLORES = { normal: ["#35902f", "#2f7a2d"], "pre-estres": ["#6f8f2f", "#5d
 
 // Visor Three.js DIRECTO (sin react-three-fiber). Recibe el estado agregado,
 // no calcula nada. Carga diferida + vista 2D si el 3D falla.
-export default function Viewer({ estados = [], dia = -1, onModo }) {
+export default function Viewer({ estados = [], dia = -1, onModo, compact = false }) {
   const secRef = useRef(null);
   const visorRef = useRef(null);
   const canvas2d = useRef(null);
@@ -70,11 +70,11 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
       const el = visorRef.current;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.setSize(el.clientWidth, 340);
+      renderer.setSize(el.clientWidth, ALT);
       el.appendChild(renderer.domElement);
       const scene = new THREE.Scene();
       scene.fog = new THREE.Fog(0xbfe3ff, 8, 22);
-      const cam = new THREE.PerspectiveCamera(45, el.clientWidth / 340, 0.1, 100);
+      const cam = new THREE.PerspectiveCamera(45, el.clientWidth / ALT, 0.1, 100);
       cam.position.set(2.6, 2.2, 3.4);
       new OrbitControls(cam, renderer.domElement).target.set(0, 1.6, 0);
       scene.add(new THREE.HemisphereLight(0xffffff, 0x3a5f2a, 1.1));
@@ -157,7 +157,7 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
       let frames = 0, t0 = performance.now(), degradado = false, visible = true, pausado = false;
       new IntersectionObserver((en) => { visible = en[0].isIntersecting; }).observe(el);
       document.addEventListener("visibilitychange", () => { pausado = document.hidden; });
-      addEventListener("resize", () => renderer.setSize(el.clientWidth, 340));
+      addEventListener("resize", () => renderer.setSize(el.clientWidth, ALT));
       (function loop() {
         requestAnimationFrame(loop);
         if (pausado || !visible) return;
@@ -183,6 +183,7 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
 
   useEffect(() => { if (modo === "3d" && api3d.current.set) api3d.current.set(estadoEfectivo()); }, [estados, dia, modo]);
 
+  const ALT = compact ? 260 : 340;
   const INFO_PARTES = {
     hojas: "Hojas: su aspecto sigue el estado hídrico simulado. Es una ilustración, no una foto de tu árbol.",
     frutos: "Frutos: se muestran como referencia visual. El modelo aún no simula cuajado ni calibre.",
@@ -191,16 +192,20 @@ export default function Viewer({ estados = [], dia = -1, onModo }) {
     arbol: "Árbol: representación ilustrativa del estado simulado.",
   };
 
-  return (
-    <section ref={secRef} style={panel}>
-      <h2>Árbol 3D — escenario B</h2>
-      <p style={hint}>Demostración visual; aún no representa un modelo validado. El visor recibe el estado del modelo, no calcula nada. Toca hojas, frutos o suelo para saber qué muestra cada parte.</p>
+  const cuerpo = (<>
       {modo === "pendiente" && (<div><button style={btn} onClick={cargar3d}>Cargar vista 3D</button>{" "}<button style={btn2} onClick={() => avisar("2d")}>Usar vista 2D</button></div>)}
-      {modo === "3d" && <div ref={visorRef} style={{ height: 340, background: "linear-gradient(#bfe3ff,#e8f5d8)", borderRadius: 10 }} />}
+      {modo === "3d" && <div ref={visorRef} style={{ height: ALT, background: "linear-gradient(#bfe3ff,#e8f5d8)", borderRadius: 10 }} />}
       {modo !== "3d" && modo !== "pendiente" && <canvas ref={canvas2d} style={{ width: "100%", borderRadius: 10 }} onClick={() => setParte("arbol")} />}
       {nota && <p style={hint}>{nota}</p>}
       {parte && <p style={hint}><b>{parte}:</b> {INFO_PARTES[parte]}</p>}
       <p><span style={badge}>Estado: {estadoEfectivo()}</span></p>
+    </>);
+  if (compact) return (<div ref={secRef}>{cuerpo}</div>);
+  return (
+    <section ref={secRef} style={panel}>
+      <h2>Árbol 3D — escenario B</h2>
+      <p style={hint}>Demostración visual; aún no representa un modelo validado. El visor recibe el estado del modelo, no calcula nada. Toca hojas, frutos o suelo para saber qué muestra cada parte.</p>
+      {cuerpo}
     </section>
   );
 }
